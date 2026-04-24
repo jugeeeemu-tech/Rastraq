@@ -1,6 +1,6 @@
 use crate::{
     db::{Database, NewItem},
-    llm::{DeterministicMockProvider, LlmProvider},
+    llm::{FastEmbedProvider, LlmProvider},
 };
 use axum::{
     extract::{Path, Query, State},
@@ -21,9 +21,13 @@ struct AppState {
 }
 
 pub fn build_router(db: Database) -> Router {
+    build_router_with_provider(db, Arc::new(FastEmbedProvider::bge_small_en_v15()))
+}
+
+pub fn build_router_with_provider(db: Database, llm: Arc<dyn LlmProvider>) -> Router {
     let state = AppState {
         db,
-        llm: Arc::new(DeterministicMockProvider),
+        llm,
     };
     Router::new()
         .route("/api/health", get(health))

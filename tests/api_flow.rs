@@ -4,15 +4,20 @@ use axum::{
 };
 use chrono::{TimeZone, Utc};
 use http_body_util::BodyExt;
-use rastraq::{app::build_router, db::Database};
+use rastraq::{
+    app::build_router_with_provider,
+    db::Database,
+    llm::DeterministicMockProvider,
+};
 use serde_json::{json, Value};
+use std::sync::Arc;
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn item_to_daily_edition_to_feedback_flow() {
     let db = Database::connect("sqlite::memory:").await.unwrap();
     db.migrate().await.unwrap();
-    let app = build_router(db);
+    let app = build_router_with_provider(db, Arc::new(DeterministicMockProvider));
 
     let item_body = json!({
         "url": "https://example.com/rust-security",
