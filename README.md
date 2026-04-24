@@ -4,8 +4,9 @@ Rastraq is a personal daily radar for newly published technical information.
 
 Phase 1 intentionally does not crawl the web or schedule external agents. An
 agent, script, or operator submits candidate items. Rastraq stores them,
-generates deterministic mock summaries and embeddings, ranks the previous local
-day, freezes a fixed daily edition, and records feedback for future ranking.
+generates lightweight summaries and local FastEmbed embeddings, ranks the
+previous local day, freezes a fixed daily edition, and records feedback for
+future ranking.
 
 ## Stack
 
@@ -13,7 +14,7 @@ day, freezes a fixed daily edition, and records feedback for future ranking.
 - Frontend: lit, Vite, TypeScript
 - Default user timezone: `Asia/Tokyo`
 - Default daily item count: `5`
-- LLM provider: `DeterministicMockProvider` behind a provider trait
+- LLM provider: FastEmbed (`BAAI/bge-small-en-v1.5`) behind a provider trait
 
 ## Run
 
@@ -63,6 +64,12 @@ curl -X POST http://127.0.0.1:3000/api/items/1/process \
   -d '{}'
 ```
 
+The default runtime provider uses local FastEmbed embeddings. The first
+`/api/items/{id}/process` call may download and initialize
+`BAAI/bge-small-en-v1.5`; `/api/health` does not load the model. The binary is
+built with dynamic ONNX Runtime loading, so set `ORT_DYLIB_PATH` to a compatible
+`libonnxruntime.so` when running the real provider.
+
 Freeze the previous local day into a fixed daily edition:
 
 ```bash
@@ -107,7 +114,8 @@ curl http://127.0.0.1:3000/api/interest-keywords
 Implemented with the `canon-tdd` workflow:
 
 - Timezone previous-day behavior
-- Deterministic mock summary and embedding
+- Deterministic mock summary and embedding for offline tests
+- Ignored FastEmbed smoke test for the real local embedding provider
 - Explicit ranking with saved feature signals
 - Full API flow from item submission to daily edition and feedback
 
@@ -117,3 +125,14 @@ Run:
 cargo test
 cargo build
 ```
+
+Run the real embedding smoke test explicitly when model downloads are allowed
+and ONNX Runtime downloads are allowed:
+
+```bash
+cargo test fastembed_provider -- --ignored
+```
+
+The ignored test downloads ONNX Runtime from the official GitHub release when
+`ORT_DYLIB_PATH` is not already set. Set `ORT_DYLIB_PATH` yourself to reuse an
+existing runtime.
